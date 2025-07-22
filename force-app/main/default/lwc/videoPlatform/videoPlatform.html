@@ -1,0 +1,207 @@
+<template>
+    <!-- Loading Spinner -->
+    <template if:true={isLoading}>
+        <lightning-spinner alternative-text="Loading videos..." size="large"></lightning-spinner>
+    </template>
+
+    <!-- Video List View -->
+    <template if:true={showVideoList}>
+        <div class="video-platform-container">
+            <!-- Header -->
+            <div class="platform-header">
+                <div class="header-content">
+                    <h1 class="platform-title">Community Video Platform</h1>
+                    <div class="header-actions">
+                        <lightning-input
+                            type="search"
+                            label="Search Videos"
+                            variant="label-hidden"
+                            placeholder="Search videos..."
+                            value={searchTerm}
+                            onchange={handleSearch}
+                            class="search-input">
+                        </lightning-input>
+                        <lightning-button
+                            variant="brand"
+                            label="Upload Video"
+                            onclick={handleUploadVideo}
+                            icon-name="utility:upload"
+                            class="upload-button">
+                        </lightning-button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Grid -->
+            <template if:true={hasVideos}>
+                <div class="video-grid">
+                    <template for:each={filteredVideos} for:item="video">
+                        <div key={video.Id} class="video-card" data-id={video.Id} onclick={handleVideoSelect}>
+                            <div class="video-thumbnail">
+                                <img src={video.thumbnailUrl} alt={video.Title__c} class="thumbnail-image"/>
+                                <div class="video-duration">5:30</div>
+                            </div>
+                            <div class="video-info">
+                                <h3 class="video-title">{video.Title__c}</h3>
+                                <p class="video-description">{video.Description__c}</p>
+                                <div class="video-stats">
+                                    <span class="view-count">{video.viewCount} views</span>
+                                    <span class="upload-date">{video.createdDate}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- No Videos Message -->
+            <template if:false={hasVideos}>
+                <div class="no-videos">
+                    <lightning-icon icon-name="utility:video" size="large" class="no-videos-icon"></lightning-icon>
+                    <h2>No videos found</h2>
+                    <p>Be the first to upload a video to the community!</p>
+                    <lightning-button
+                        variant="brand"
+                        label="Upload First Video"
+                        onclick={handleUploadVideo}>
+                    </lightning-button>
+                </div>
+            </template>
+        </div>
+    </template>
+
+    <!-- Video Player View -->
+    <template if:true={showVideoPlayer}>
+        <div class="video-player-container">
+            <!-- Back Button -->
+            <div class="back-navigation">
+                <lightning-button
+                    variant="neutral"
+                    label="Back to Videos"
+                    onclick={handleBackToList}
+                    icon-name="utility:back"
+                    class="back-button">
+                </lightning-button>
+            </div>
+
+            <!-- Video Player -->
+            <div class="video-player-section">
+                <div class="video-player">
+                    <video controls width="100%" height="400">
+                        <source src={selectedVideo.Video_URL__c} type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                
+                <div class="video-details">
+                    <h1 class="player-video-title">{selectedVideo.Title__c}</h1>
+                    <div class="video-actions">
+                        <div class="video-stats">
+                            <span class="view-count">{selectedVideo.viewCount} views</span>
+                            <span class="upload-date">{selectedVideo.createdDate}</span>
+                        </div>
+                        <div class="action-buttons">
+                            <lightning-button
+                                variant="neutral"
+                                label={selectedVideo.likeCount}
+                                onclick={handleLike}
+                                icon-name="utility:like"
+                                class="like-button">
+                            </lightning-button>
+                        </div>
+                    </div>
+                    <p class="video-description">{selectedVideo.Description__c}</p>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="comments-section">
+                <h3 class="comments-title">Comments</h3>
+                
+                <!-- Add Comment -->
+                <div class="add-comment">
+                    <lightning-textarea
+                        label="Add a comment"
+                        value={newComment}
+                        onchange={handleCommentChange}
+                        placeholder="Share your thoughts..."
+                        class="comment-input">
+                    </lightning-textarea>
+                    <lightning-button
+                        variant="brand"
+                        label="Post Comment"
+                        onclick={handleAddComment}
+                        disabled={newComment}
+                        class="post-comment-button">
+                    </lightning-button>
+                </div>
+
+                <!-- Comments List -->
+                <div class="comments-list">
+                    <template for:each={comments} for:item="comment">
+                        <div key={comment.Id} class="comment-item">
+                            <div class="comment-header">
+                                <span class="comment-author">{comment.CreatedBy.Name}</span>
+                                <span class="comment-date">{comment.createdDate}</span>
+                            </div>
+                            <p class="comment-text">{comment.Comment_Text__c}</p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Upload Modal -->
+    <template if:true={showUploadModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" 
+                            title="Close" onclick={handleCloseUpload}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-modal__title slds-hyphenate">Upload Video</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <lightning-input
+                        label="Video Title"
+                        value={uploadTitle}
+                        data-field="uploadTitle"
+                        onchange={handleInputChange}
+                        required
+                        class="upload-field">
+                    </lightning-input>
+                    <lightning-textarea
+                        label="Description"
+                        value={uploadDescription}
+                        data-field="uploadDescription"
+                        onchange={handleInputChange}
+                        class="upload-field">
+                    </lightning-textarea>
+                    <lightning-input
+                        label="Video URL"
+                        value={uploadUrl}
+                        data-field="uploadUrl"
+                        onchange={handleInputChange}
+                        required
+                        class="upload-field">
+                    </lightning-input>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button
+                        variant="neutral"
+                        label="Cancel"
+                        onclick={handleCloseUpload}>
+                    </lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Upload"
+                        onclick={handleUploadSubmit}>
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>
